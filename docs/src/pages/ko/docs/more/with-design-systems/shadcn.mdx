@@ -360,7 +360,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 ## 애니메이션 후 메모리 해제
 
-Radix UI 기반의 shadcn `Dialog`는 MUI의 `onExited`나 Ant Design의 `afterClose` 같은 애니메이션 완료 콜백을 직접 제공하지 않아요. 대신 `onOpenChange`에서 `close`를 호출한 뒤 애니메이션 지속 시간만큼 `setTimeout`으로 `unmount`를 예약하면 버튼·backdrop 클릭·ESC 키·X 버튼까지 모두 처리돼요.
+shadcn `Dialog`는 닫기 애니메이션이 끝나는 시점을 알려주는 콜백을 따로 제공하지 않아요. `onOpenChange`에서 `close`를 호출한 뒤 애니메이션 지속 시간만큼 `setTimeout`으로 `unmount`를 예약하면 버튼·backdrop 클릭·ESC 키·X 버튼까지 모두 처리돼요.
 
 <br />
 

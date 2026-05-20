@@ -6,7 +6,7 @@ Chakra UI v3의 `Dialog` 컴포넌트를 `overlay-kit`과 함께 사용하는 �
 
 ## 설치
 
-Chakra UI v3는 `@emotion/react`만 있으면 돼요. (v2와 달리 `@emotion/styled`, `framer-motion`은 필요 없어요)
+Chakra UI는 `@emotion/react`만 있으면 돼요.
 
 ```sh npm2yarn filename="shell" copy
 npm install overlay-kit @chakra-ui/react @emotion/react
@@ -139,7 +139,7 @@ export function Example() {
 
 ## 애니메이션 후 메모리 해제
 
-Chakra v3 `Dialog`는 MUI의 `onExited`나 Ant Design의 `afterClose` 같은 애니메이션 완료 콜백을 직접 제공하지 않아요. 대신 `onOpenChange`에서 `close`를 호출한 뒤 애니메이션 지속 시간만큼 `setTimeout`으로 `unmount`를 예약하는 방식이 가장 간단해요. 버튼 클릭뿐만 아니라 backdrop 클릭·ESC 키로 닫히는 경우도 모두 처리돼요.
+Chakra `Dialog`는 닫기 애니메이션이 끝나는 시점을 알려주는 콜백을 따로 제공하지 않아요. `onOpenChange`에서 `close`를 호출한 뒤 애니메이션 지속 시간만큼 `setTimeout`으로 `unmount`를 예약하는 방식이 가장 간단해요. 버튼 클릭뿐만 아니라 backdrop 클릭·ESC 키로 닫히는 경우도 모두 처리돼요.
 
 <br />
 

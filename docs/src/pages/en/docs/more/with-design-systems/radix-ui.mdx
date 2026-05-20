@@ -159,7 +159,7 @@ export function Example() {
 
 ## Releasing Memory After Animation
 
-Radix `Dialog` does not expose a callback like MUI's `onExited` or Ant Design's `afterClose`. Instead, call `close` in `onOpenChange` and schedule `unmount` with `setTimeout` for the animation duration. This handles button clicks, backdrop clicks, and the Escape key uniformly.
+Radix `Dialog` does not expose a dedicated animation-complete callback. Call `close` in `onOpenChange` and schedule `unmount` with `setTimeout` for the animation duration. This handles button clicks, backdrop clicks, and the Escape key uniformly.
 
 <br />
 
