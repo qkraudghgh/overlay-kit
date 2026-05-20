@@ -11,4 +11,7 @@ export default {
   shadcn: {
     title: 'shadcn/ui',
   },
+  'radix-ui': {
+    title: 'Radix UI',
+  },
 };

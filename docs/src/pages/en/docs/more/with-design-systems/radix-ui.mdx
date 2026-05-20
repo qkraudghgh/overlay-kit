@@ -1,0 +1,236 @@
+import { Sandpack } from '@/components';
+
+# With Radix UI
+
+Learn how to use Radix UI's `Dialog` primitives together with `overlay-kit`.
+
+## Installation
+
+Install the Radix `Dialog` package. Since Radix UI ships unstyled headless primitives, the examples below pair it with Tailwind CSS.
+
+```sh npm2yarn filename="shell" copy
+npm install overlay-kit @radix-ui/react-dialog
+```
+
+## Basic Usage
+
+Radix `Dialog.Root` takes an `open` prop for visibility and `onOpenChange` for dismissal. `onOpenChange` receives a `boolean`, so calling `close()` when `!open` covers backdrop clicks and the Escape key naturally.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@radix-ui/react-dialog': '^1.1.6',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import * as Dialog from '@radix-ui/react-dialog';
+
+function App() {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => (
+          <Dialog.Root open={isOpen} onOpenChange={(open) => !open && close()}>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg bg-white p-6 shadow-lg">
+                <Dialog.Title className="text-lg font-semibold">Are you sure you want to continue?</Dialog.Title>
+                <Dialog.Description className="text-sm text-gray-500">
+                  This action cannot be undone.
+                </Dialog.Description>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                    onClick={close}
+                  >
+                    No
+                  </button>
+                  <button
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    onClick={close}
+                  >
+                    Yes
+                  </button>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        ));
+      }}
+    >
+      Open Confirm Dialog
+    </button>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## Receiving Async Results
+
+Use `overlay.openAsync` to receive the user's choice as a `Promise`. Pass the result through `close(value)` on each button, and provide a default value when the dialog is dismissed via backdrop or Escape.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@radix-ui/react-dialog': '^1.1.6',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { useState } from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import * as Dialog from '@radix-ui/react-dialog';
+
+function App() {
+  const [result, setResult] = useState<boolean | null>(null);
+
+  return (
+    <div>
+      <p className="mb-2 text-sm">Result: {result === null ? 'Not selected' : result ? 'Yes' : 'No'}</p>
+      <button
+        className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        onClick={async () => {
+          const confirmed = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+            <Dialog.Root open={isOpen} onOpenChange={(open) => !open && close(false)}>
+              <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg bg-white p-6 shadow-lg">
+                  <Dialog.Title className="text-lg font-semibold">Are you sure you want to continue?</Dialog.Title>
+                  <Dialog.Description className="text-sm text-gray-500">
+                    This action cannot be undone.
+                  </Dialog.Description>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                      onClick={() => close(false)}
+                    >
+                      No
+                    </button>
+                    <button
+                      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                      onClick={() => close(true)}
+                    >
+                      Yes
+                    </button>
+                  </div>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
+          ));
+          setResult(confirmed);
+        }}
+      >
+        Open Confirm Dialog
+      </button>
+    </div>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## Releasing Memory After Animation
+
+Radix `Dialog` does not expose a callback like MUI's `onExited` or Ant Design's `afterClose`. Instead, call `close` in `onOpenChange` and schedule `unmount` with `setTimeout` for the animation duration. This handles button clicks, backdrop clicks, and the Escape key uniformly.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@radix-ui/react-dialog': '^1.1.6',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import * as Dialog from '@radix-ui/react-dialog';
+
+function App() {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+      onClick={() => {
+        overlay.open(({ isOpen, close, unmount }) => (
+          <Dialog.Root
+            open={isOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                close();
+                // Radix dialog's close animation is around 150ms.
+                setTimeout(unmount, 200);
+              }
+            }}
+          >
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 transition-opacity data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg bg-white p-6 shadow-lg transition-opacity data-[state=closed]:opacity-0 data-[state=open]:opacity-100">
+                <Dialog.Title className="text-lg font-semibold">Are you sure you want to continue?</Dialog.Title>
+                <Dialog.Description className="text-sm text-gray-500">
+                  This action cannot be undone.
+                </Dialog.Description>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                    onClick={close}
+                  >
+                    No
+                  </button>
+                  <button
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    onClick={close}
+                  >
+                    Yes
+                  </button>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        ));
+      }}
+    >
+      Open Confirm Dialog
+    </button>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>

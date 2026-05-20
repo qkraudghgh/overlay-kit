@@ -1,0 +1,236 @@
+import { Sandpack } from '@/components';
+
+# Radix UI와 함께 쓰기
+
+Radix UI의 `Dialog` primitives를 `overlay-kit`과 함께 사용하는 방법을 알아볼게요.
+
+## 설치
+
+Radix `Dialog` 패키지를 설치해요. Radix UI는 스타일이 없는 헤드리스 컴포넌트이기 때문에, 예제에서는 Tailwind CSS와 함께 사용해요.
+
+```sh npm2yarn filename="shell" copy
+npm install overlay-kit @radix-ui/react-dialog
+```
+
+## 기본 사용법
+
+Radix `Dialog.Root`는 `open` prop으로 열림 상태를, `onOpenChange`로 닫기 이벤트를 처리해요. `onOpenChange`는 `boolean`을 인자로 받기 때문에 `!open`일 때 `close()`를 호출해주면 backdrop 클릭·ESC 키로 닫히는 경우까지 자연스럽게 처리돼요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@radix-ui/react-dialog': '^1.1.6',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import * as Dialog from '@radix-ui/react-dialog';
+
+function App() {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => (
+          <Dialog.Root open={isOpen} onOpenChange={(open) => !open && close()}>
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg bg-white p-6 shadow-lg">
+                <Dialog.Title className="text-lg font-semibold">정말로 계속하시겠어요?</Dialog.Title>
+                <Dialog.Description className="text-sm text-gray-500">
+                  이 작업은 되돌릴 수 없어요.
+                </Dialog.Description>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                    onClick={close}
+                  >
+                    아니요
+                  </button>
+                  <button
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    onClick={close}
+                  >
+                    네
+                  </button>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        ));
+      }}
+    >
+      Confirm Dialog 열기
+    </button>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## 비동기 결과 받기
+
+`overlay.openAsync`를 사용하면 사용자가 "네"를 눌렀는지 "아니요"를 눌렀는지 `Promise` 결과로 받을 수 있어요. 각 버튼에서 `close(value)`로 결과를 넘기고, `onOpenChange`에서는 backdrop·ESC로 닫힐 때 기본값을 넣어줘요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@radix-ui/react-dialog': '^1.1.6',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { useState } from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import * as Dialog from '@radix-ui/react-dialog';
+
+function App() {
+  const [result, setResult] = useState<boolean | null>(null);
+
+  return (
+    <div>
+      <p className="mb-2 text-sm">결과: {result === null ? '선택 없음' : result ? '네' : '아니요'}</p>
+      <button
+        className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        onClick={async () => {
+          const confirmed = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+            <Dialog.Root open={isOpen} onOpenChange={(open) => !open && close(false)}>
+              <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg bg-white p-6 shadow-lg">
+                  <Dialog.Title className="text-lg font-semibold">정말로 계속하시겠어요?</Dialog.Title>
+                  <Dialog.Description className="text-sm text-gray-500">
+                    이 작업은 되돌릴 수 없어요.
+                  </Dialog.Description>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                      onClick={() => close(false)}
+                    >
+                      아니요
+                    </button>
+                    <button
+                      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                      onClick={() => close(true)}
+                    >
+                      네
+                    </button>
+                  </div>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
+          ));
+          setResult(confirmed);
+        }}
+      >
+        Confirm Dialog 열기
+      </button>
+    </div>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## 애니메이션 후 메모리 해제
+
+Radix `Dialog`는 MUI의 `onExited`나 Ant Design의 `afterClose` 같은 애니메이션 완료 콜백을 직접 제공하지 않아요. 대신 `onOpenChange`에서 `close`를 호출한 뒤 애니메이션 지속 시간만큼 `setTimeout`으로 `unmount`를 예약하면 버튼·backdrop 클릭·ESC 키까지 모두 처리할 수 있어요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@radix-ui/react-dialog': '^1.1.6',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import * as Dialog from '@radix-ui/react-dialog';
+
+function App() {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+      onClick={() => {
+        overlay.open(({ isOpen, close, unmount }) => (
+          <Dialog.Root
+            open={isOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                close();
+                // Radix dialog 기본 닫기 애니메이션은 약 150ms예요.
+                setTimeout(unmount, 200);
+              }
+            }}
+          >
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/50 transition-opacity data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
+              <Dialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg bg-white p-6 shadow-lg transition-opacity data-[state=closed]:opacity-0 data-[state=open]:opacity-100">
+                <Dialog.Title className="text-lg font-semibold">정말로 계속하시겠어요?</Dialog.Title>
+                <Dialog.Description className="text-sm text-gray-500">
+                  이 작업은 되돌릴 수 없어요.
+                </Dialog.Description>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                    onClick={close}
+                  >
+                    아니요
+                  </button>
+                  <button
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    onClick={close}
+                  >
+                    네
+                  </button>
+                </div>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
+        ));
+      }}
+    >
+      Confirm Dialog 열기
+    </button>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
