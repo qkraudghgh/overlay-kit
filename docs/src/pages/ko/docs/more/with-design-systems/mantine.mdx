@@ -146,12 +146,7 @@ function App() {
     <Button
       onClick={() => {
         overlay.open(({ isOpen, close, unmount }) => (
-          <Modal
-            opened={isOpen}
-            onClose={close}
-            title="정말로 계속하시겠어요?"
-            transitionProps={{ onExited: unmount }}
-          >
+          <Modal opened={isOpen} onClose={close} title="정말로 계속하시겠어요?" transitionProps={{ onExited: unmount }}>
             <Group justify="flex-end" gap="sm">
               <Button variant="default" onClick={close}>
                 아니요
