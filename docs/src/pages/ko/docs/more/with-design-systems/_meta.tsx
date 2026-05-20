@@ -8,4 +8,7 @@ export default {
   'ant-design': {
     title: 'Ant Design',
   },
+  shadcn: {
+    title: 'shadcn/ui',
+  },
 };
