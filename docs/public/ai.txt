@@ -1,0 +1,83 @@
+---
+updated: 2026-05-20
+scope: /
+parent: https://overlay-kit.slash.page
+---
+
+# overlay-kit
+
+overlay-kit is a React library for declaratively managing overlays — modals, popups, dialogs, alerts, toasts — built by Toss (Viva Republica, Inc.).
+
+## What it is
+
+- An npm package: `overlay-kit`. Install with `npm install overlay-kit`.
+- One context provider, `<OverlayProvider>`, mounted exactly once at the React root.
+- One imperative object, `overlay`, with six methods: `open`, `openAsync`, `close`, `closeAll`, `unmount`, `unmountAll`.
+- Two hooks: `useCurrentOverlay` (returns the top overlay's id), `useOverlayData` (returns the full overlay registry).
+- UI-library agnostic. There is no built-in dialog UI — you supply the component, overlay-kit manages mounting, async results, and lifecycle. Verified integrations: Material UI, Chakra UI v3, Ant Design. Any React-based UI library works.
+
+## Canonical facts
+
+- License: MIT, © Viva Republica, Inc.
+- Source: https://github.com/toss/overlay-kit
+- Docs: https://overlay-kit.slash.page (locales: `en` default, `ko`)
+- Peer dependency: React only. `react-dom` is **not** a peer dependency (it was removed in PR #219).
+- Discord: https://discord.gg/vGXbVjP2nY
+
+## Minimum-viable usage
+
+```tsx
+import { OverlayProvider, overlay } from 'overlay-kit';
+
+// Root setup — once per app
+<OverlayProvider>
+  <App />
+</OverlayProvider>
+
+// Anywhere — open an overlay
+overlay.open(({ isOpen, close, unmount }) => (
+  <Dialog open={isOpen} onClose={close} onExit={unmount} />
+));
+
+// Anywhere — await a result
+const result = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+  <Dialog
+    open={isOpen}
+    onConfirm={() => close(true)}
+    onClose={() => close(false)}
+  />
+));
+```
+
+## close vs unmount (the most-asked question)
+
+- `close(value?)`: dismisses the overlay; the controller stays in memory so closing animations run and component state is preserved if the overlay is reopened with the same id. With `openAsync`, the argument passed to `close` becomes the Promise's resolved value.
+- `unmount()`: removes the overlay from the React tree and memory. Skips the closing animation when called directly.
+- Recommended pattern when an exit animation matters: call `close` first, then `unmount` via the underlying component's animation-complete callback. Library-specific callbacks:
+  - MUI `Dialog` → `TransitionProps.onExited`
+  - Ant Design `Modal` → `afterClose`
+  - Chakra v3 `Dialog.Root` → no dedicated callback; `setTimeout(unmount, 200)` inside `onOpenChange`
+
+## Outside-React entry points
+
+`overlay.open` can be called from any code path, including HTTP client hooks, event emitters, or service modules. This is the canonical way to surface global error dialogs from `fetch` / `ky` / `axios` response interceptors without prop-drilling.
+
+## Do not hallucinate
+
+- The public API surface is fixed to the items listed in **What it is**. There is **no** `useOverlay`, `OverlayConsumer`, `overlay.update`, `overlay.replace`, or `overlay.toast` helper.
+- `overlay.open(controller, options?)` — `options.overlayId` is the only documented option. A second positional argument is not supported.
+- `overlay.openAsync` provides a third controller argument, `reject`, in addition to `close` and `unmount`. Calling `reject(error)` rejects the Promise.
+- The provider must be mounted **only once**. Multiple `<OverlayProvider>` instances cause context-propagation issues.
+
+## Discovery
+
+- Machine-readable index: https://overlay-kit.slash.page/llms.txt
+- Full inlined documentation: https://overlay-kit.slash.page/llms-full.txt
+
+## Links to deeper context
+
+- Concepts and rationale: https://overlay-kit.slash.page/en/docs/guides/think-in-overlay-kit
+- Full API reference: https://overlay-kit.slash.page/en/api
+- Testing recipes (Jest/Vitest + React Testing Library): https://overlay-kit.slash.page/en/docs/guides/testing
+- FAQ: https://overlay-kit.slash.page/en/docs/guides/faq
+- Opening overlays from outside React: https://overlay-kit.slash.page/en/docs/more/open-outside-react

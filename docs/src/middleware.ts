@@ -10,6 +10,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - img (image files)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|img).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|img|ai\\.txt|llms\\.txt|llms-full\\.txt).*)',
   ],
 };
