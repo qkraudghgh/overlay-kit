@@ -1,0 +1,252 @@
+import { Sandpack } from '@/components';
+
+# Headless UI와 함께 쓰기
+
+Headless UI의 `Dialog` 컴포넌트를 `overlay-kit`과 함께 사용하는 방법을 알아볼게요.
+
+## 설치
+
+Headless UI는 스타일이 없는 헤드리스 컴포넌트이기 때문에, 예제에서는 Tailwind CSS와 함께 사용해요.
+
+```sh npm2yarn filename="shell" copy
+npm install overlay-kit @headlessui/react
+```
+
+## 기본 사용법
+
+Headless UI `Dialog`는 `open` prop으로 열림 상태를, `onClose` 콜백으로 닫기 이벤트를 처리해요. `onClose`는 backdrop 클릭과 ESC 키를 누를 때 자동으로 호출되기 때문에, 여기에 `close`를 그대로 전달하면 돼요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@headlessui/react': '^2.2.0',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle, Description } from '@headlessui/react';
+
+function App() {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => (
+          <Dialog open={isOpen} onClose={close} className="relative z-50">
+            <DialogBackdrop className="fixed inset-0 bg-black/50" />
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+              <DialogPanel className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-xl">
+                <DialogTitle className="text-lg font-semibold">정말로 계속하시겠어요?</DialogTitle>
+                <Description className="text-sm text-gray-500">이 작업은 되돌릴 수 없어요.</Description>
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                    onClick={close}
+                  >
+                    아니요
+                  </button>
+                  <button
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                    onClick={close}
+                  >
+                    네
+                  </button>
+                </div>
+              </DialogPanel>
+            </div>
+          </Dialog>
+        ));
+      }}
+    >
+      Confirm Dialog 열기
+    </button>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## 비동기 결과 받기
+
+`overlay.openAsync`를 사용하면 사용자가 "네"를 눌렀는지 "아니요"를 눌렀는지 `Promise` 결과로 받을 수 있어요. 각 버튼에서 `close(value)`를 호출하고, `onClose`에는 backdrop·ESC로 닫힐 때의 기본값을 넣어줘요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@headlessui/react': '^2.2.0',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { useState } from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle, Description } from '@headlessui/react';
+
+function App() {
+  const [result, setResult] = useState<boolean | null>(null);
+
+  return (
+    <div>
+      <p className="mb-2 text-sm">결과: {result === null ? '선택 없음' : result ? '네' : '아니요'}</p>
+      <button
+        className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+        onClick={async () => {
+          const confirmed = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+            <Dialog open={isOpen} onClose={() => close(false)} className="relative z-50">
+              <DialogBackdrop className="fixed inset-0 bg-black/50" />
+              <div className="fixed inset-0 flex items-center justify-center p-4">
+                <DialogPanel className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-xl">
+                  <DialogTitle className="text-lg font-semibold">정말로 계속하시겠어요?</DialogTitle>
+                  <Description className="text-sm text-gray-500">이 작업은 되돌릴 수 없어요.</Description>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                      onClick={() => close(false)}
+                    >
+                      아니요
+                    </button>
+                    <button
+                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                      onClick={() => close(true)}
+                    >
+                      네
+                    </button>
+                  </div>
+                </DialogPanel>
+              </div>
+            </Dialog>
+          ));
+          setResult(confirmed);
+        }}
+      >
+        Confirm Dialog 열기
+      </button>
+    </div>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## 애니메이션 후 메모리 해제
+
+Headless UI `Dialog`는 transition을 직접 처리하지 않고, `<Transition>` 컴포넌트로 감싸서 표시를 제어하는 패턴을 권장해요. `<Transition>`의 `afterLeave` 콜백에 `unmount`를 전달하면 닫기 애니메이션이 끝난 직후 안전하게 오버레이 메모리를 해제할 수 있어요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@headlessui/react': '^2.2.0',
+  }}
+  providerOptions={{
+    externalResources: ['https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'],
+  }}
+>
+
+```tsx Example.tsx active
+import { Fragment } from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogPanel,
+  DialogTitle,
+  Description,
+  Transition,
+  TransitionChild,
+} from '@headlessui/react';
+
+function App() {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+      onClick={() => {
+        overlay.open(({ isOpen, close, unmount }) => (
+          <Transition show={isOpen} as={Fragment} afterLeave={unmount}>
+            <Dialog onClose={close} className="relative z-50">
+              <TransitionChild
+                as={Fragment}
+                enter="ease-out duration-200"
+                enterFrom="opacity-0"
+                enterTo="opacity-100"
+                leave="ease-in duration-150"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+              >
+                <DialogBackdrop className="fixed inset-0 bg-black/50" />
+              </TransitionChild>
+              <div className="fixed inset-0 flex items-center justify-center p-4">
+                <TransitionChild
+                  as={Fragment}
+                  enter="ease-out duration-200"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-150"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  <DialogPanel className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-xl">
+                    <DialogTitle className="text-lg font-semibold">정말로 계속하시겠어요?</DialogTitle>
+                    <Description className="text-sm text-gray-500">이 작업은 되돌릴 수 없어요.</Description>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+                        onClick={close}
+                      >
+                        아니요
+                      </button>
+                      <button
+                        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                        onClick={close}
+                      >
+                        네
+                      </button>
+                    </div>
+                  </DialogPanel>
+                </TransitionChild>
+              </div>
+            </Dialog>
+          </Transition>
+        ));
+      }}
+    >
+      Confirm Dialog 열기
+    </button>
+  );
+}
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+```
+
+</Sandpack>

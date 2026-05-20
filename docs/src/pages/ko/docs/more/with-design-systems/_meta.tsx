@@ -17,4 +17,7 @@ export default {
   mantine: {
     title: 'Mantine',
   },
+  'headless-ui': {
+    title: 'Headless UI',
+  },
 };
