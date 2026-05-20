@@ -14,4 +14,7 @@ export default {
   'radix-ui': {
     title: 'Radix UI',
   },
+  mantine: {
+    title: 'Mantine',
+  },
 };

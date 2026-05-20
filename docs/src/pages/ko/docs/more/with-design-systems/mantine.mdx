@@ -1,0 +1,181 @@
+import { Sandpack } from '@/components';
+
+# Mantine과 함께 쓰기
+
+Mantine의 `Modal` 컴포넌트를 `overlay-kit`과 함께 사용하는 방법을 알아볼게요.
+
+## 설치
+
+Mantine 코어 패키지와 hooks 패키지를 함께 설치하고, 루트에 스타일시트를 import 해야 해요.
+
+```sh npm2yarn filename="shell" copy
+npm install overlay-kit @mantine/core @mantine/hooks
+```
+
+## 기본 사용법
+
+Mantine `Modal`은 `opened` prop으로 열림 상태를, `onClose` 콜백으로 닫기 이벤트를 처리해요. 앱 루트는 `MantineProvider`로 감싸야 하고, `@mantine/core/styles.css`를 import 해야 모달이 정상적으로 보여요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@mantine/core': '^7.13.0',
+    '@mantine/hooks': '^7.13.0',
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Button, MantineProvider, Modal, Group } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+function App() {
+  return (
+    <Button
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => (
+          <Modal opened={isOpen} onClose={close} title="정말로 계속하시겠어요?">
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={close}>
+                아니요
+              </Button>
+              <Button onClick={close}>네</Button>
+            </Group>
+          </Modal>
+        ));
+      }}
+    >
+      Confirm Dialog 열기
+    </Button>
+  );
+}
+
+export function Example() {
+  return (
+    <MantineProvider>
+      <OverlayProvider>
+        <App />
+      </OverlayProvider>
+    </MantineProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## 비동기 결과 받기
+
+`overlay.openAsync`로 사용자의 선택을 `Promise`로 받을 수 있어요. 각 버튼의 `close(value)`에 결과를 넘기고, `onClose`에서는 backdrop·ESC로 닫힐 때의 기본값을 넘겨요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@mantine/core': '^7.13.0',
+    '@mantine/hooks': '^7.13.0',
+  }}
+>
+
+```tsx Example.tsx active
+import { useState } from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Button, MantineProvider, Modal, Group, Text } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+function App() {
+  const [result, setResult] = useState<boolean | null>(null);
+
+  return (
+    <Group align="center" gap="md">
+      <Text size="sm">결과: {result === null ? '선택 없음' : result ? '네' : '아니요'}</Text>
+      <Button
+        onClick={async () => {
+          const confirmed = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+            <Modal opened={isOpen} onClose={() => close(false)} title="정말로 계속하시겠어요?">
+              <Group justify="flex-end" gap="sm">
+                <Button variant="default" onClick={() => close(false)}>
+                  아니요
+                </Button>
+                <Button onClick={() => close(true)}>네</Button>
+              </Group>
+            </Modal>
+          ));
+          setResult(confirmed);
+        }}
+      >
+        Confirm Dialog 열기
+      </Button>
+    </Group>
+  );
+}
+
+export function Example() {
+  return (
+    <MantineProvider>
+      <OverlayProvider>
+        <App />
+      </OverlayProvider>
+    </MantineProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## 애니메이션 후 메모리 해제
+
+Mantine `Modal`은 `transitionProps`를 통해 transition 콜백을 받을 수 있어요. `transitionProps.onExited`에 `unmount`를 전달하면 애니메이션이 끝난 직후 안전하게 오버레이 메모리를 해제할 수 있어요.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@mantine/core': '^7.13.0',
+    '@mantine/hooks': '^7.13.0',
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Button, MantineProvider, Modal, Group } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+function App() {
+  return (
+    <Button
+      onClick={() => {
+        overlay.open(({ isOpen, close, unmount }) => (
+          <Modal
+            opened={isOpen}
+            onClose={close}
+            title="정말로 계속하시겠어요?"
+            transitionProps={{ onExited: unmount }}
+          >
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={close}>
+                아니요
+              </Button>
+              <Button onClick={close}>네</Button>
+            </Group>
+          </Modal>
+        ));
+      }}
+    >
+      Confirm Dialog 열기
+    </Button>
+  );
+}
+
+export function Example() {
+  return (
+    <MantineProvider>
+      <OverlayProvider>
+        <App />
+      </OverlayProvider>
+    </MantineProvider>
+  );
+}
+```
+
+</Sandpack>
