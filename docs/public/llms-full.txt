@@ -1,0 +1,920 @@
+# overlay-kit — full documentation
+
+> Concatenated, LLM-friendly snapshot of the English documentation hosted at https://overlay-kit.slash.page. Each section is prefixed by its canonical URL. MDX-only wrappers (`<Sandpack>`, frontmatter `import`s) have been stripped; all prose, code blocks, and tables are preserved verbatim. For the navigable index, see https://overlay-kit.slash.page/llms.txt. For high-confidence facts and "do not hallucinate" guardrails, see https://overlay-kit.slash.page/ai.txt.
+
+Source: https://github.com/toss/overlay-kit (branch: `main`, license: MIT, © Viva Republica, Inc.)
+
+Intentionally excluded as noise (the canonical pages remain reachable via the index):
+
+- The marketing landing page at `/en` — value-prop cards rather than API documentation.
+- Verbose test code samples in the Testing guide — replaced by a short scenario index pointing back to the canonical URL.
+- Per-design-system integration walkthroughs for Material UI, Chakra UI, and Ant Design — these document third-party UI libraries, not overlay-kit's API.
+
+---
+
+# Guides
+
+## Introduction to overlay-kit
+
+URL: https://overlay-kit.slash.page/en/docs/guides/introduction
+
+`overlay-kit` is a library for declaratively managing overlays like **modals, popups, and dialogs** in React.
+
+You can efficiently implement overlays without complex state management or unnecessary event handling.
+
+### Installation
+
+```sh
+npm install overlay-kit
+```
+
+### Key Features
+
+#### Declarative API
+
+- Define overlay UI and behavior declaratively with simple code.
+- Reduce state management and event handling code for easier development.
+
+#### Promise-based API
+
+- Return overlay results as `Promises`.
+- Handle user input results or combine with asynchronous logic.
+
+#### Extensible Components
+
+- Freely define your desired overlay components.
+- Use with various UI libraries.
+
+### Using overlay-kit
+
+Let's learn how to use `overlay-kit` with a simple example.
+
+#### Overlays
+
+Any component that renders above the screen can be an overlay. Below is a minimal confirmation dialog (using MUI `Dialog` to illustrate; any React UI library works).
+
+```tsx
+// confirm-dialog.tsx
+export function ConfirmDialog({ isOpen, close }) {
+  return (
+    <Dialog open={isOpen} onClose={close}>
+      <DialogTitle>Are you sure you want to continue?</DialogTitle>
+      <DialogActions>
+        <Button onClick={close}>No</Button>
+        <Button onClick={close}>Yes</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+```
+
+#### Setting Overlay Position
+
+Overlays should be rendered in an appropriate position on the screen. Generally, it's best to render at the app root using `OverlayProvider`.
+
+```tsx
+import { OverlayProvider } from 'overlay-kit';
+import { createRoot } from 'react-dom/client';
+
+export function Example() {
+  return (
+    <OverlayProvider>
+      <App />
+    </OverlayProvider>
+  );
+}
+
+const root = createRoot(document.getElementById('root'));
+root.render(<Example />);
+```
+
+#### Opening Overlays
+
+```tsx
+import { overlay } from 'overlay-kit';
+import { ConfirmDialog } from './confirm-dialog';
+
+<Button
+  onClick={() => {
+    overlay.open(({ isOpen, close }) => {
+      return <ConfirmDialog isOpen={isOpen} close={close} />;
+    });
+  }}
+>
+  Open Confirm Dialog
+</Button>
+```
+
+#### Opening Asynchronous Overlays
+
+`overlay.openAsync` returns the result as a `Promise`. The value passed to `close(value)` becomes the resolved value.
+
+```tsx
+const result = await overlay.openAsync(({ isOpen, close }) => {
+  return (
+    <ConfirmDialog
+      isOpen={isOpen}
+      close={() => close(false)}
+      confirm={() => close(true)}
+    />
+  );
+});
+```
+
+#### Closing Overlays — `close` vs `unmount`
+
+`overlay.open` and `overlay.openAsync` provide `close` and `unmount` functions to the controller. Both dismiss the overlay but behave differently:
+
+1. **`close`** — runs the close animation, and state (e.g., `count`) is retained. When reopened with the same id, the previous state is restored.
+2. **`unmount`** — immediately removes the overlay from memory, skipping the close animation. When reopened, state is reset.
+
+If a close animation is needed, use `close` first, then call `unmount` after the animation completes.
+
+#### Releasing Overlay Memory
+
+Because `close` retains state in memory after the animation, opening and closing many overlays may leak memory. Call `unmount` after the close animation ends. If the component exposes an `onExit`-style callback, pass `unmount` there. MUI doesn't expose `onExit` directly, but React's `useEffect` cleanup can call it on unmount:
+
+```tsx
+// confirm-dialog.tsx
+import { useEffect } from 'react';
+
+export function ConfirmDialog({ isOpen, close, onExit }) {
+  useEffect(() => {
+    return () => onExit();
+  }, []);
+
+  return (
+    <Dialog open={isOpen} onClose={close}>
+      {/* ... */}
+    </Dialog>
+  );
+}
+```
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => {
+  return <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />;
+});
+```
+
+---
+
+## Think in overlay-kit
+
+URL: https://overlay-kit.slash.page/en/docs/guides/think-in-overlay-kit
+
+`overlay-kit` is based on React's philosophy. The **Declarative Overlay Pattern** is its embodiment.
+
+### Why Use overlay-kit
+
+#### Problems with Traditional Overlay Management
+
+1. **Complexity of State Management** — overlay state was managed directly with `useState` or global state; state management and UI logic became entangled.
+2. **Repetitive Event Handling** — event handling for opening, closing, and returning results had to be rewritten repeatedly.
+3. **Lack of Reusability** — UI and logic were tightly coupled through callback functions used to return values from overlays.
+
+#### Goals of overlay-kit
+
+1. **Design Following React Philosophy** — React favors declarative code; overlay-kit helps manage overlays declaratively.
+2. **Improve Development Productivity** — by encapsulating state management and event handling, developers can focus on UI and business logic.
+3. **Enhance Extensibility and Reusability** — by separating UI and behavior and returning Promises.
+
+### Declarative Overlay Pattern
+
+Traditional overlay management used an **Imperative** approach — complex, hard to maintain, with `useState` and mixed event handling. The **Declarative Overlay Pattern** lets you write more intuitive code by managing overlays based on **behavior** rather than state.
+
+#### Imperative Approach
+
+```tsx
+import { useState } from 'react';
+
+function Overlay() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  function handleOpen() {
+    setIsOpen(true);
+  }
+
+  function handleClose() {
+    setIsOpen(false);
+  }
+
+  return (
+    <>
+      <Button onClick={handleOpen}>Open</Button>
+      <Dialog open={isOpen} onClose={handleClose}>
+        <DialogTitle>Imperative Overlay</DialogTitle>
+        <DialogActions>
+          <Button onClick={handleClose}>OK</Button>
+          <Button onClick={handleClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+```
+
+#### Declarative Approach
+
+```tsx
+import { overlay } from 'overlay-kit';
+
+function Overlay() {
+  return (
+    <Button
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => (
+          <Dialog open={isOpen} onClose={close}>
+            <DialogTitle>Declarative Overlay</DialogTitle>
+            <DialogActions>
+              <Button onClick={close}>OK</Button>
+              <Button onClick={close}>Cancel</Button>
+            </DialogActions>
+          </Dialog>
+        ));
+      }}
+    >
+      Open
+    </Button>
+  );
+}
+```
+
+### Core Principles
+
+#### Co-location
+
+Related code is placed close together. Overlay calls, state management, and component definition live in one place, improving readability.
+
+#### Minimum API
+
+overlay-kit provides a simple and concise API. The core APIs are two:
+
+1. `overlay.open` — opens and closes overlays.
+2. `overlay.openAsync` — processes asynchronous logic by returning values.
+
+These leverage general JavaScript patterns. For example, `overlay.openAsync` returns a `Promise`, making chaining patterns easy to apply.
+
+---
+
+## Code Comparison
+
+URL: https://overlay-kit.slash.page/en/docs/guides/code-comparison
+
+### Before: Traditional React Overlay Implementation
+
+```tsx
+import { useState } from 'react';
+
+function MyPage() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setIsOpen(true)}>Open</Button>
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} />
+    </>
+  );
+}
+```
+
+State declaration, state change, and rendering logic are pushed apart by React's Hook rules, disrupting the flow.
+
+### After: Overlay Implementation with overlay-kit
+
+```tsx
+import { overlay } from 'overlay-kit';
+
+function MyPage() {
+  return (
+    <Button
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => {
+          return <Dialog open={isOpen} onClose={close} />;
+        });
+      }}
+    >
+      Open
+    </Button>
+  );
+}
+```
+
+Boilerplate is significantly reduced. You no longer need to manage the overlay state directly.
+
+---
+
+## Hooks
+
+URL: https://overlay-kit.slash.page/en/docs/guides/hooks
+
+`overlay-kit` exposes `useCurrentOverlay` and `useOverlayData` for global overlay state. They enable state-based UX control, focusing, and conditional rendering outside of overlays.
+
+### useCurrentOverlay
+
+Returns the ID of the currently top-most overlay.
+
+The overlay ID can be specified by passing `overlayId` as the second argument to `overlay.open()` or `overlay.openAsync()`:
+
+```tsx
+overlay.open(
+  ({ isOpen, close }) => <ConfirmDialog isOpen={isOpen} close={close} />,
+  { overlayId: 'custom-overlayId' }
+);
+```
+
+If `overlayId` is omitted, an id is generated internally as `overlay-kit-[random number]`.
+
+Example:
+
+```tsx
+import { overlay, useCurrentOverlay } from 'overlay-kit';
+
+function App() {
+  const current = useCurrentOverlay();
+
+  return (
+    <div>
+      <Button onClick={() => {
+        overlay.open(
+          ({ isOpen, close }) => <Dialog open={isOpen} onClose={close} />,
+          { overlayId: 'modal-a' }
+        );
+      }}>Open A</Button>
+      <p>Current value: {current}</p>
+    </div>
+  );
+}
+```
+
+### useOverlayData
+
+Returns information about all overlays currently in memory, including open and closed-but-not-yet-unmounted overlays.
+
+Each overlay item has:
+
+| Property       | Type      | Description                                                                                                                           |
+| -------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `string`  | Unique ID that identifies the overlay. Specified as `overlayId` when calling `overlay.open()`, or automatically generated if omitted. |
+| `componentKey` | `string`  | Internal unique key React uses to render and distinguish overlay UI. A new value is assigned each time the overlay opens.             |
+| `isOpen`       | `boolean` | Whether the overlay is currently open. Becomes `false` when `close()` is called, and remains in memory until `unmount()`.             |
+| `controller`   | `FC`      | React component that renders the overlay. The UI function passed to `overlay.open()` is stored here.                                  |
+
+```tsx
+const overlayData = useOverlayData();
+
+Object.entries(overlayData).forEach(([id, item]) => {
+  console.log(id);              // overlayId
+  console.log(item.isOpen);     // true / false
+  console.log(item.controller); // component rendering function
+});
+```
+
+---
+
+## Testing
+
+URL: https://overlay-kit.slash.page/en/docs/guides/testing
+
+### Prerequisites
+
+#### Test Runner
+
+- Jest — [Getting Started](https://jestjs.io/docs/getting-started), [Configuration](https://jestjs.io/docs/configuration#testenvironment-string)
+- Vitest — [Getting Started](https://vitest.dev/guide/#getting-started), [Configuration](https://vitest.dev/config/)
+
+#### UI Testing Tools
+
+- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
+
+### Scenarios covered on the docs page
+
+The published guide demonstrates the following recipes with Jest/Vitest + React Testing Library. Full code samples live at the URL above; the index here is what an LLM typically needs to reason about test design.
+
+- **Closing overlays via `overlay.unmount`** — render a component that opens an overlay imperatively, click a button calling `overlay.unmount(overlayId)`, and assert the overlay leaves the DOM with `waitFor`.
+- **Opening multiple overlays via `overlay.open`** — open N overlays in a single `useEffect` and assert all of their contents are in the DOM.
+- **Async result via `overlay.openAsync`** — assert that the value passed to `close(value)` resolves as the awaited result; mock with `vi.fn()` and verify with `toHaveBeenCalledWith`.
+- **Sequential unmount across overlays** — open multiple overlays, unmount them in a non-LIFO order, and assert `useCurrentOverlay` / DOM state stays consistent.
+- **Active overlay tracking via `useCurrentOverlay`** — assert that the hook returns the id of the top overlay across `open` / `close` / `unmount` transitions.
+- **Closing/removing all overlays** — `overlay.closeAll()` removes them from the screen while `useOverlayData()` still reports them; `overlay.unmountAll()` removes them from memory and the DOM entirely.
+
+Rule of thumb: assert via `waitFor` (overlays mount/unmount asynchronously) and use `userEvent` for clicks so portaled overlays receive events correctly.
+
+---
+
+## FAQ
+
+URL: https://overlay-kit.slash.page/en/docs/guides/faq
+
+### Q. When is overlay-kit most useful?
+
+`overlay-kit` is particularly useful in:
+
+- **Complex Overlay Management** — chained dialogs and nested overlays.
+- **Alignment with React Philosophy** — declarative UI instead of state-driven UI.
+- **Performance Optimization** — heavy overlays that frequently open and close.
+- **Large Applications** — consistent overlay management across the team.
+
+### Q. What's the difference between `overlay.open` and `overlay.openAsync`?
+
+- **`overlay.open`** — basic open/close.
+- **`overlay.openAsync`** — returns a Promise for handling results asynchronously.
+
+```tsx
+// overlay.open
+overlay.open(({ isOpen, close }) => (
+  <Dialog open={isOpen} onClose={close}>
+    <p>Simple overlay</p>
+  </Dialog>
+));
+
+// overlay.openAsync
+const result = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+  <Dialog open={isOpen} onClose={() => close(false)}>
+    <Button onClick={() => close(true)}>Confirm</Button>
+  </Dialog>
+));
+
+console.log(result ? 'Yes' : 'No');
+```
+
+### Q. What's the difference between `close` and `unmount`?
+
+- **`close`** — closes the overlay but keeps state in memory; previous state is restored on reopen.
+- **`unmount`** — completely removes the overlay from memory; starts with initial state on reopen.
+
+**Use cases:**
+
+- **`close`** — performance optimization with frequently opened/closed overlays.
+- **`unmount`** — prevent memory leaks by removing overlays no longer needed.
+
+### Q. What's the difference between `overlay.closeAll` and `overlay.unmountAll`?
+
+- **`overlay.closeAll`** — closes all open overlays but keeps state in memory.
+- **`overlay.unmountAll`** — completely removes all overlays from memory.
+
+### Q. Why does state persist when reopening a closed overlay?
+
+`close` keeps state in memory. To reset state, use `unmount` to fully remove the overlay.
+
+### Q. When should I use `unmount`?
+
+- For lightweight overlays, `close` alone is usually sufficient.
+- Use `unmount` (or `unmountAll`) when overlays are no longer needed or you must free memory.
+
+### Q. Which UI libraries can I use with overlay-kit?
+
+`overlay-kit` is not tied to any specific UI library and works with any React-based UI library — Material-UI, Chakra UI, Ant Design, and others.
+
+### Q. Does overlay-kit support TypeScript?
+
+Yes, with full TypeScript support.
+
+```tsx
+const result = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+  <Dialog open={isOpen} onClose={() => close(false)}>
+    <Button onClick={() => close(true)}>Confirm</Button>
+  </Dialog>
+));
+```
+
+### Q. Why isn't my closing animation showing?
+
+Calling `unmount` immediately skips the closing animation. To preserve the animation, call `close` first, then `unmount` after the animation completes.
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => (
+  <Dialog
+    open={isOpen}
+    onClose={() => {
+      close(); // Run closing animation
+      setTimeout(() => unmount(), 300); // Remove from memory after animation
+    }}
+  >
+    <p>Maintain animation</p>
+  </Dialog>
+));
+```
+
+---
+
+# Learn More
+
+## Opening Overlays
+
+URL: https://overlay-kit.slash.page/en/docs/more/basic
+
+### Opening Simple Overlays
+
+```tsx
+import { overlay } from 'overlay-kit';
+
+overlay.open(({ isOpen, close }) => (
+  <Dialog open={isOpen} onClose={close}>
+    <DialogTitle>Are you sure you want to continue?</DialogTitle>
+    <DialogActions>
+      <Button onClick={close}>No</Button>
+      <Button onClick={close}>Yes</Button>
+    </DialogActions>
+  </Dialog>
+));
+```
+
+### Opening Asynchronous Overlays
+
+```tsx
+const result = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+  <Dialog open={isOpen} onClose={() => close(false)}>
+    <DialogTitle>Are you sure you want to continue?</DialogTitle>
+    <DialogActions>
+      <Button onClick={() => close(false)}>No</Button>
+      <Button onClick={() => close(true)}>Yes</Button>
+    </DialogActions>
+  </Dialog>
+));
+```
+
+### Releasing Overlay Memory
+
+You can remove overlays from memory using `unmount`. If there is a closing animation, calling `unmount` immediately can skip the animation; call `close` first and `unmount` after the animation completes.
+
+#### Using the `onExit` prop
+
+Pass `unmount` to the component's `onExit`-style callback so the overlay is removed once the close animation finishes.
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => {
+  return <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />;
+});
+
+// In ConfirmDialog, wire onExit to fire after the close transition:
+//   useEffect(() => () => onExit(), []);
+```
+
+#### Using `setTimeout`
+
+If there's no `onExit` prop, use `setTimeout` to call `unmount` after the animation duration.
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => (
+  <ConfirmDialog
+    isOpen={isOpen}
+    close={() => {
+      close();
+      setTimeout(unmount, 600);
+    }}
+  />
+));
+```
+
+---
+
+## Opening Overlays Outside React
+
+URL: https://overlay-kit.slash.page/en/docs/more/open-outside-react
+
+`overlay.open` can be called from outside React components — for example, an HTTP client hook that opens an error dialog whenever a request fails.
+
+```tsx
+import ky from 'ky';
+import { overlay } from 'overlay-kit';
+
+const api = ky.extend({
+  hooks: {
+    afterResponse: [
+      (_, __, response) => {
+        if (response.status >= 400) {
+          overlay.open(({ isOpen, close }) => (
+            <ErrorDialog open={isOpen} onClose={close} />
+          ));
+        }
+      },
+    ],
+  },
+});
+```
+
+The same pattern works with `fetch` wrappers, `axios` interceptors, event emitters, or service modules — anywhere outside React's render tree. The only requirement is that `<OverlayProvider>` is mounted somewhere in the running React tree at the time the call fires.
+
+---
+
+# API Reference
+
+## `<OverlayProvider>`
+
+URL: https://overlay-kit.slash.page/en/api/components/overlay-provider
+
+`OverlayProvider` determines where overlays are rendered in your React application.
+
+```tsx
+<OverlayProvider>
+  <App />
+</OverlayProvider>
+```
+
+### Reference
+
+Place `OverlayProvider` at the root of your application.
+
+#### Important Notes
+
+- `OverlayProvider` should be rendered **only once** in your React application. Multiple instances may prevent overlays from working correctly due to context propagation issues.
+
+### Usage
+
+`<OverlayProvider />` provides the context needed to render all overlays. Any component that renders overlays must be placed under `<OverlayProvider />`.
+
+```tsx
+import React from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Modal } from '@src/components';
+
+function App() {
+  const notify = () =>
+    overlay.open(({ isOpen, close, unmount }) => (
+      <Modal isOpen={isOpen} onClose={close} onExit={unmount}>
+        {/* Modal content */}
+      </Modal>
+    ));
+
+  return <button onClick={notify}>open modal</button>;
+}
+
+export function Root() {
+  return (
+    <OverlayProvider>
+      <App />
+      {/* All overlays will be rendered here */}
+    </OverlayProvider>
+  );
+}
+```
+
+---
+
+## `overlay.open`
+
+URL: https://overlay-kit.slash.page/en/api/utils/overlay-open
+
+```ts
+const overlayId = overlay.open(controller, options);
+```
+
+### Reference
+
+`overlay.open(controller, options?)` — call when you need to open an overlay.
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => {
+  return <Alert isOpen={isOpen} close={close} onExit={unmount} />;
+});
+```
+
+#### Parameters
+
+- `controller` — the overlay controller function. Returns JSX and receives parameters for overlay state and control:
+  - `isOpen` — whether the overlay is open.
+  - `close` — closes the overlay. The overlay information remains in memory so closing animations can run. Call `unmount` to completely remove it.
+  - `unmount` — removes the overlay. If called immediately with a closing animation, the component may be removed before the animation completes.
+- **optional** `options`:
+  - `overlayId` — a unique ID for the overlay; used to identify it.
+
+#### Return Value
+
+The unique ID for the overlay as a string. If `overlayId` is not specified, a random string is returned.
+
+#### Important Notes
+
+When manually specifying an ID, avoid duplicates. Opening multiple overlays with duplicate IDs may cause unexpected behavior.
+
+### Usage
+
+```tsx
+const overlayId = 'unique-overlay-id';
+
+overlay.open(
+  ({ isOpen, close, unmount }) => {
+    return <Alert isOpen={isOpen} close={close} onExit={unmount} />;
+  },
+  { overlayId }
+);
+```
+
+---
+
+## `overlay.openAsync`
+
+URL: https://overlay-kit.slash.page/en/api/utils/overlay-open-async
+
+```ts
+const result = await overlay.openAsync(controller, options);
+```
+
+### Reference
+
+`overlay.openAsync(controller, options?)` — open an overlay that returns a value.
+
+```tsx
+const result = await overlay.openAsync(({ isOpen, close, unmount }) => {
+  function confirm() {
+    close(true);
+  }
+  function cancel() {
+    close(false);
+  }
+
+  return (
+    <ConfirmDialog
+      isOpen={isOpen}
+      confirm={confirm}
+      close={cancel}
+      onExit={unmount}
+    />
+  );
+});
+```
+
+#### Parameters
+
+- `controller` — the overlay controller function. Returns JSX and receives:
+  - `isOpen` — whether the overlay is open.
+  - `close` — closes the overlay. The argument passed to `close` is delivered as the resolved value of the `Promise` returned by `overlay.openAsync`.
+  - `unmount` — removes the overlay. If called immediately with a closing animation, the component may be removed before the animation completes.
+  - `reject` — when called, the argument passed is delivered as the rejected value of the `Promise` returned by `overlay.openAsync`, and the overlay closes.
+- **optional** `options`:
+  - `overlayId` — a unique ID for the overlay.
+
+#### Return Value
+
+The value passed to the `close` function.
+
+### Usage
+
+```tsx
+const result = await overlay.openAsync(({ isOpen, close, unmount }) => {
+  return (
+    <ConfirmDialog
+      isOpen={isOpen}
+      confirm={() => close(true)}
+      close={() => close(false)}
+      onExit={unmount}
+    />
+  );
+});
+
+if (result === true) {
+  console.log('User selected confirm.');
+} else {
+  console.log('User selected cancel.');
+}
+```
+
+---
+
+## `overlay.close`
+
+URL: https://overlay-kit.slash.page/en/api/utils/overlay-close
+
+`overlay.close` closes a specific overlay using the provided `overlayId`. It removes the overlay from the screen but doesn't completely delete it from memory.
+
+```ts
+overlay.close(overlayId);
+```
+
+### Reference
+
+#### Parameters
+
+- `overlayId` — the unique ID of the overlay to close. The ID is either returned from `overlay.open` or directly specified via `options.overlayId`.
+
+#### Important Notes
+
+When this function is called, the overlay disappears from the screen but remains in memory and the React element tree. To completely remove the overlay, call `overlay.unmount` after the animation ends.
+
+### Usage
+
+```tsx
+const overlayId = overlay.open(({ isOpen, close, unmount }) => {
+  return <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />;
+});
+
+overlay.close(overlayId);
+```
+
+```tsx
+const overlayId = 'unique-id';
+
+overlay.open(
+  ({ isOpen, close, unmount }) => {
+    return <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />;
+  },
+  { overlayId }
+);
+
+overlay.close(overlayId);
+```
+
+---
+
+## `overlay.closeAll`
+
+URL: https://overlay-kit.slash.page/en/api/utils/overlay-close-all
+
+`overlay.closeAll` closes all currently open overlays. It removes overlays from the screen but doesn't completely delete them from memory.
+
+```ts
+overlay.closeAll();
+```
+
+### Important Notes
+
+To completely remove overlays, call `overlay.unmountAll` after the animations end.
+
+### Usage
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => (
+  <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />
+));
+overlay.open(({ isOpen, close, unmount }) => (
+  <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />
+));
+
+// Closes all of the above
+overlay.closeAll();
+```
+
+---
+
+## `overlay.unmount`
+
+URL: https://overlay-kit.slash.page/en/api/utils/overlay-unmount
+
+`overlay.unmount` completely removes a specific overlay from memory. The overlay with the specified `overlayId` is removed from both the React element tree and memory.
+
+```ts
+overlay.unmount(overlayId);
+```
+
+### Important Notes
+
+- The overlay is immediately removed from memory, which may cause closing animations not to be displayed.
+- For overlays with animations, call `overlay.close` first and then `overlay.unmount` after the closing animation completes.
+
+### Usage
+
+```tsx
+const overlayId = overlay.open(({ isOpen, close, unmount }) => {
+  return <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />;
+});
+
+overlay.close(overlayId);
+
+setTimeout(() => {
+  overlay.unmount(overlayId);
+}, 1000);
+```
+
+---
+
+## `overlay.unmountAll`
+
+URL: https://overlay-kit.slash.page/en/api/utils/overlay-unmount-all
+
+`overlay.unmountAll` completely removes all open overlays from both the React element tree and memory.
+
+```ts
+overlay.unmountAll();
+```
+
+### Important Notes
+
+- Overlays are immediately removed from memory, which may cause closing animations not to be displayed.
+- For overlays with animations, call `overlay.closeAll` first and then `overlay.unmountAll` after the closing animations complete.
+
+### Interface
+
+```tsx
+function unmountAll(): void;
+```
+
+### Usage
+
+```tsx
+overlay.open(({ isOpen, close, unmount }) => (
+  <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />
+));
+overlay.open(({ isOpen, close, unmount }) => (
+  <ConfirmDialog isOpen={isOpen} close={close} onExit={unmount} />
+));
+
+// Removes all of the above
+overlay.unmountAll();
+```
+
+```tsx
+overlay.closeAll();
+
+setTimeout(() => {
+  overlay.unmountAll();
+}, 1000);
+```
