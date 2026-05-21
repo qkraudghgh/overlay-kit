@@ -1,0 +1,181 @@
+import { Sandpack } from '@/components';
+
+# With Mantine
+
+Learn how to use Mantine's `Modal` component together with `overlay-kit`.
+
+## Installation
+
+Install the Mantine core and hooks packages, and import the stylesheet at the root of your app.
+
+```sh npm2yarn filename="shell" copy
+npm install overlay-kit @mantine/core @mantine/hooks
+```
+
+## Basic Usage
+
+Mantine `Modal` takes an `opened` prop for visibility and `onClose` for dismissal. Wrap your app with `MantineProvider` and import `@mantine/core/styles.css` so the modal renders correctly.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@mantine/core': '^7.13.0',
+    '@mantine/hooks': '^7.13.0',
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Button, MantineProvider, Modal, Group } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+function App() {
+  return (
+    <Button
+      onClick={() => {
+        overlay.open(({ isOpen, close }) => (
+          <Modal opened={isOpen} onClose={close} title="Are you sure you want to continue?">
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={close}>
+                No
+              </Button>
+              <Button onClick={close}>Yes</Button>
+            </Group>
+          </Modal>
+        ));
+      }}
+    >
+      Open Confirm Dialog
+    </Button>
+  );
+}
+
+export function Example() {
+  return (
+    <MantineProvider>
+      <OverlayProvider>
+        <App />
+      </OverlayProvider>
+    </MantineProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## Receiving Async Results
+
+Use `overlay.openAsync` to receive the user's choice as a `Promise`. Pass the result through `close(value)` on each button, and provide a default value in `onClose` for backdrop or Escape dismissal.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@mantine/core': '^7.13.0',
+    '@mantine/hooks': '^7.13.0',
+  }}
+>
+
+```tsx Example.tsx active
+import { useState } from 'react';
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Button, MantineProvider, Modal, Group, Text } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+function App() {
+  const [result, setResult] = useState<boolean | null>(null);
+
+  return (
+    <Group align="center" gap="md">
+      <Text size="sm">Result: {result === null ? 'Not selected' : result ? 'Yes' : 'No'}</Text>
+      <Button
+        onClick={async () => {
+          const confirmed = await overlay.openAsync<boolean>(({ isOpen, close }) => (
+            <Modal opened={isOpen} onClose={() => close(false)} title="Are you sure you want to continue?">
+              <Group justify="flex-end" gap="sm">
+                <Button variant="default" onClick={() => close(false)}>
+                  No
+                </Button>
+                <Button onClick={() => close(true)}>Yes</Button>
+              </Group>
+            </Modal>
+          ));
+          setResult(confirmed);
+        }}
+      >
+        Open Confirm Dialog
+      </Button>
+    </Group>
+  );
+}
+
+export function Example() {
+  return (
+    <MantineProvider>
+      <OverlayProvider>
+        <App />
+      </OverlayProvider>
+    </MantineProvider>
+  );
+}
+```
+
+</Sandpack>
+
+## Releasing Memory After Animation
+
+Mantine `Modal` accepts transition callbacks via `transitionProps`. Passing `unmount` to `transitionProps.onExited` releases overlay memory safely right after the close animation completes.
+
+<br />
+
+<Sandpack
+  dependencies={{
+    '@mantine/core': '^7.13.0',
+    '@mantine/hooks': '^7.13.0',
+  }}
+>
+
+```tsx Example.tsx active
+import { OverlayProvider, overlay } from 'overlay-kit';
+import { Button, MantineProvider, Modal, Group } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+function App() {
+  return (
+    <Button
+      onClick={() => {
+        overlay.open(({ isOpen, close, unmount }) => (
+          <Modal
+            opened={isOpen}
+            onClose={close}
+            title="Are you sure you want to continue?"
+            transitionProps={{ onExited: unmount }}
+          >
+            <Group justify="flex-end" gap="sm">
+              <Button variant="default" onClick={close}>
+                No
+              </Button>
+              <Button onClick={close}>Yes</Button>
+            </Group>
+          </Modal>
+        ));
+      }}
+    >
+      Open Confirm Dialog
+    </Button>
+  );
+}
+
+export function Example() {
+  return (
+    <MantineProvider>
+      <OverlayProvider>
+        <App />
+      </OverlayProvider>
+    </MantineProvider>
+  );
+}
+```
+
+</Sandpack>

@@ -8,4 +8,16 @@ export default {
   'ant-design': {
     title: 'Ant Design',
   },
+  shadcn: {
+    title: 'shadcn/ui',
+  },
+  'radix-ui': {
+    title: 'Radix UI',
+  },
+  mantine: {
+    title: 'Mantine',
+  },
+  'headless-ui': {
+    title: 'Headless UI',
+  },
 };

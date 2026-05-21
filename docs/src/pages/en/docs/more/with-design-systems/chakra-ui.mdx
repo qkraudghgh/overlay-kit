@@ -6,7 +6,7 @@ Learn how to use Chakra UI v3's `Dialog` component together with `overlay-kit`.
 
 ## Installation
 
-Chakra UI v3 only needs `@emotion/react` (unlike v2, you no longer need `@emotion/styled` or `framer-motion`).
+Chakra UI only needs `@emotion/react`.
 
 ```sh npm2yarn filename="shell" copy
 npm install overlay-kit @chakra-ui/react @emotion/react
@@ -139,7 +139,7 @@ export function Example() {
 
 ## Releasing Memory After Animation
 
-Unlike MUI's `onExited` or Ant Design's `afterClose`, Chakra v3 `Dialog` doesn't expose a dedicated animation-complete callback. The simplest approach is to call `close()` inside `onOpenChange` and schedule `unmount` with `setTimeout` matching the animation duration. This covers button clicks, backdrop clicks, and ESC dismissal uniformly.
+Chakra `Dialog` doesn't expose a dedicated animation-complete callback. The simplest approach is to call `close()` inside `onOpenChange` and schedule `unmount` with `setTimeout` matching the animation duration. This covers button clicks, backdrop clicks, and ESC dismissal uniformly.
 
 <br />
 
