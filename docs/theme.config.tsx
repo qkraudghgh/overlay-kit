@@ -4,13 +4,19 @@ import { useConfig, type DocsThemeConfig } from 'nextra-theme-docs';
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react';
 
 const SITE = 'https://overlay-kit.slash.page';
+const RAW_BASE = 'https://raw.githubusercontent.com/toss/overlay-kit/main/docs/src/pages';
 
 type Locale = 'en' | 'ko';
+type CopyState = 'idle' | 'copying' | 'copied' | 'error';
 
 const ASK_AI_COPY: Record<
   Locale,
   {
     trigger: string;
+    copying: string;
+    copied: string;
+    failed: string;
+    caretAria: string;
     items: {
       chatgpt: { title: string; desc: string };
       claude: { title: string; desc: string };
@@ -18,14 +24,22 @@ const ASK_AI_COPY: Record<
   }
 > = {
   en: {
-    trigger: 'Ask AI',
+    trigger: 'Copy Markdown',
+    copying: 'Copying…',
+    copied: 'Copied!',
+    failed: 'Copy failed',
+    caretAria: 'Open AI menu',
     items: {
       chatgpt: { title: 'Open in ChatGPT', desc: 'Ask questions about this page' },
       claude: { title: 'Open in Claude', desc: 'Ask questions about this page' },
     },
   },
   ko: {
-    trigger: 'AI에 묻기',
+    trigger: '마크다운 복사',
+    copying: '복사 중…',
+    copied: '복사됨',
+    failed: '복사 실패',
+    caretAria: 'AI 메뉴 열기',
     items: {
       chatgpt: { title: 'ChatGPT에서 열기', desc: '이 페이지에 대해 질문하기' },
       claude: { title: 'Claude에서 열기', desc: '이 페이지에 대해 질문하기' },
@@ -33,10 +47,20 @@ const ASK_AI_COPY: Record<
   },
 };
 
-function buildAskAiUrls(asPath: string, locale: Locale) {
+function buildPageUrl(asPath: string, locale: Locale): string {
   const cleanPath = asPath.replace(/[#?].*$/, '');
   const withLocale = cleanPath.startsWith(`/${locale}/`) ? cleanPath : `/${locale}${cleanPath}`;
-  const pageUrl = `${SITE}${withLocale}`;
+  return `${SITE}${withLocale}`;
+}
+
+function buildRawMdxUrl(asPath: string, locale: Locale): string {
+  const cleanPath = asPath.replace(/[#?].*$/, '');
+  const withoutLocale = cleanPath.startsWith(`/${locale}/`) ? cleanPath.slice(locale.length + 1) : cleanPath;
+  return `${RAW_BASE}/${locale}${withoutLocale}.mdx`;
+}
+
+function buildAskAiUrls(asPath: string, locale: Locale) {
+  const pageUrl = buildPageUrl(asPath, locale);
   const prompt = `Read ${pageUrl}, I want to ask questions about it.`;
   return {
     chatgpt: `https://chatgpt.com/?hints=search&q=${encodeURIComponent(prompt)}`,
@@ -50,10 +74,12 @@ function AskAi() {
   const asPath = router.asPath ?? '/';
 
   const [open, setOpen] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setOpen(false);
+    setCopyState('idle');
   }, [asPath]);
 
   useEffect(() => {
@@ -82,19 +108,50 @@ function AskAi() {
   const urls = buildAskAiUrls(asPath, locale);
   const labels = ASK_AI_COPY[locale];
 
+  const triggerLabel =
+    copyState === 'copying'
+      ? labels.copying
+      : copyState === 'copied'
+        ? labels.copied
+        : copyState === 'error'
+          ? labels.failed
+          : labels.trigger;
+
+  const handleCopy = async () => {
+    if (copyState === 'copying') return;
+    setCopyState('copying');
+    try {
+      const res = await fetch(buildRawMdxUrl(asPath, locale));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1600);
+    } catch {
+      setCopyState('error');
+      window.setTimeout(() => setCopyState('idle'), 2000);
+    }
+  };
+
   return (
     <div ref={wrapRef} style={askAiStyles.wrap}>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        style={askAiStyles.trigger}
-      >
-        <SparkleIcon />
-        <span>{labels.trigger}</span>
-        <CaretIcon open={open} />
-      </button>
+      <div style={askAiStyles.chip}>
+        <button type="button" onClick={handleCopy} style={askAiStyles.chipLeft} disabled={copyState === 'copying'}>
+          <CopyIcon />
+          <span>{triggerLabel}</span>
+        </button>
+        <div style={askAiStyles.divider} aria-hidden="true" />
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={labels.caretAria}
+          style={askAiStyles.chipRight}
+        >
+          <CaretIcon open={open} />
+        </button>
+      </div>
       {open && (
         <div role="menu" style={askAiStyles.menu}>
           <AskAiItem
@@ -154,7 +211,7 @@ function AskAiItem({
   );
 }
 
-function SparkleIcon() {
+function CopyIcon() {
   return (
     <svg
       width="14"
@@ -167,7 +224,8 @@ function SparkleIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M12 4l-2 2M6 10l-2 2" />
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+      <path d="M3.5 10.5h-.25A.75.75 0 0 1 2.5 9.75V3.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 .75.75v.25" />
     </svg>
   );
 }
@@ -255,18 +313,40 @@ const askAiStyles: Record<string, CSSProperties> = {
     display: 'inline-flex',
     marginBlockEnd: 16,
   },
-  trigger: {
+  chip: {
+    display: 'inline-flex',
+    alignItems: 'stretch',
+    height: 32,
+    borderRadius: 999,
+    background: 'rgba(127, 127, 127, 0.08)',
+    border: '1px solid rgba(127, 127, 127, 0.18)',
+    overflow: 'hidden',
+    color: 'currentColor',
+  },
+  chipLeft: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    height: 32,
     paddingInline: 12,
     fontSize: 13,
     fontWeight: 500,
-    color: 'currentColor',
-    background: 'rgba(127, 127, 127, 0.08)',
-    border: '1px solid rgba(127, 127, 127, 0.18)',
-    borderRadius: 999,
+    color: 'inherit',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  divider: {
+    width: 1,
+    background: 'rgba(127, 127, 127, 0.18)',
+  },
+  chipRight: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingInline: 8,
+    color: 'inherit',
+    background: 'transparent',
+    border: 'none',
     cursor: 'pointer',
   },
   menu: {
