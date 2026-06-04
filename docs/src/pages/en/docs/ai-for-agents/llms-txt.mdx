@@ -1,0 +1,37 @@
+# AI Integration
+
+overlay-kit ships a handful of plain-text endpoints so AI agents can ground their answers in the real API surface — not the API they imagine you have. ChatGPT, Claude, Cursor, and similar tools can read these endpoints and answer questions about the library accurately.
+
+The endpoints follow the [llms.txt](https://llmstxt.org) convention: regular Markdown files that an assistant (or a human) can drop into a chat without any special tooling. The URLs are stable, so you can paste them into bookmarks, custom instructions, or knowledge bases.
+
+## Endpoints
+
+| URL | Contents |
+|---|---|
+| [`/llms.txt`](https://overlay-kit.slash.page/llms.txt) | A Markdown index of every guide and API page, with a one-line description per entry. Hand this to the assistant when you want it to know the shape of the docs and pull in pages on demand. |
+| [`/llms-full.txt`](https://overlay-kit.slash.page/llms-full.txt) | The English documentation concatenated into a single Markdown file. Use it when you want the whole docs in one conversation, vector store, or prompt cache. |
+| [`/ai.txt`](https://overlay-kit.slash.page/ai.txt) | A short list of high-confidence facts about the public API. Useful for keeping assistants from inventing methods that do not exist. |
+
+These three endpoints are English-only. The Markdown of an individual page in either language is reachable via the **Copy Markdown** button described below.
+
+## ChatGPT
+
+Use the **Copy Markdown** button in the top-right of any documentation page and pick **Open in ChatGPT**. ChatGPT opens with this prompt pre-filled:
+
+```
+Read <page-url>, I want to ask questions about it.
+```
+
+For broader questions about the library, paste the full-docs URL manually:
+
+```
+Read https://overlay-kit.slash.page/llms-full.txt, I want to ask questions about it.
+```
+
+## Claude
+
+The same dropdown has an **Open in Claude** shortcut that opens [claude.ai](https://claude.ai) with the same prompt. Pasting `/llms-full.txt` works just as well.
+
+## Copying the page itself
+
+If your tool of choice is neither ChatGPT nor Claude — a local model, an IDE assistant, a teammate over Slack — click the **left side** of the **Copy Markdown** button. It fetches the raw MDX of the current page and copies it to your clipboard, ready to paste anywhere.

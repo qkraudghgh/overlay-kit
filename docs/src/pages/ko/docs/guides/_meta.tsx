@@ -8,9 +8,6 @@ export default {
   'code-comparison': {
     title: '코드 비교',
   },
-  'llms-txt': {
-    title: 'LLMs.txt',
-  },
   faq: {
     title: 'FAQ',
   },
