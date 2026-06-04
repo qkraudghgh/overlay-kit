@@ -1,0 +1,41 @@
+# LLMs.txt
+
+overlay-kit 문서는 LLM이 잘 이해하도록 설계되어 있습니다. ChatGPT, Claude, Cursor 같은 어시스턴트에게 문서를 통째로 건네서 질문에 답하게 하거나, 이 라이브러리에 실제로 동작하는 코드를 생성하게 할 수 있습니다.
+
+이를 위해 사이트는 일반 HTML 페이지와 함께 세 가지 텍스트 엔드포인트를 제공합니다.
+
+## 엔드포인트
+
+| URL | 무엇인가 | 언제 쓰는가 |
+|---|---|---|
+| [`/llms.txt`](https://overlay-kit.slash.page/llms.txt) | 문서 전체를 한눈에 볼 수 있는 짧은 Markdown 인덱스. 모든 가이드와 API 페이지가 한 줄 설명과 함께 링크되어 있습니다. | 어시스턴트에게 문서의 구조를 먼저 알려주고, 필요한 페이지를 그때그때 가져오게 하고 싶을 때. |
+| [`/llms-full.txt`](https://overlay-kit.slash.page/llms-full.txt) | 영문 문서 전체를 하나의 Markdown 파일로 합친 것. MDX 전용 래퍼는 제거되어 있고 본문/코드/표는 그대로 보존됩니다. | 문서 전체를 단일 대화창, 벡터 스토어, 또는 prompt cache에 한 번에 넣고 싶을 때. |
+| [`/ai.txt`](https://overlay-kit.slash.page/ai.txt) | overlay-kit에 대한 고신뢰 사실과 "환각하지 마라" 가드레일 — 실제 API 표면을 명시한 목록. | 어시스턴트가 존재하지 않는 API를 지어내지 못하게 막고 싶을 때. |
+
+세 파일 모두 [llms.txt](https://llmstxt.org) 제안을 따릅니다. 일반 텍스트라 별도 도구 없이 그대로 쓸 수 있습니다.
+
+## 어시스턴트에서 활용하기
+
+### ChatGPT / Claude (웹)
+
+`/docs`와 `/api` 아래의 모든 페이지에는 우측 상단에 **AI에 묻기** 드롭다운이 있습니다. 현재 페이지를 ChatGPT 또는 Claude에 미리 입력된 상태로 여는 단축 메뉴입니다. 입력되는 prompt는 다음과 같습니다:
+
+```
+Read <page-url>, I want to ask questions about it.
+```
+
+문서 전체에 대해 묻고 싶다면 다음 한 줄을 직접 붙여 넣어도 됩니다:
+
+```
+Read https://overlay-kit.slash.page/llms-full.txt, I want to ask questions about it.
+```
+
+어시스턴트가 페이지를 가져와서 이후 질문에 문서 기반으로 답합니다.
+
+### Cursor / VS Code (에디터)
+
+위 URL들을 에디터 AI 어시스턴트의 문서 컨텍스트로 그대로 붙여 넣을 수 있습니다. overlay-kit 전용 MCP 서버는 아직 제공하지 않습니다 — 추후 제공될 수 있습니다.
+
+## 라이선스
+
+overlay-kit은 MIT 라이선스입니다. 문서 콘텐츠는 [toss/overlay-kit](https://github.com/toss/overlay-kit) 출처를 표기하면 자유롭게 인용·학습에 활용할 수 있습니다.
